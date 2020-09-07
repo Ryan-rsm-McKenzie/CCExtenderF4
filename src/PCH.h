@@ -14,18 +14,57 @@
 #include <type_traits>
 
 #include <boost/algorithm/searching/knuth_morris_pratt.hpp>
+#include <boost/container/static_vector.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 
 #ifdef NDEBUG
 #include <spdlog/sinks/basic_file_sink.h>
 #else
-#include <spdlog/sinks/msvc_sink.h>
+#include <spdlog/sinks/base_sink.h>
+
+namespace WinAPI
+{
+	void OutputDebugStringA(const char* a_outputString);
+}
+
+namespace logger
+{
+	template <class Mutex>
+	class msvc_sink :
+		public spdlog::sinks::base_sink<Mutex>
+	{
+	private:
+		using super = spdlog::sinks::base_sink<Mutex>;
+
+	public:
+		explicit msvc_sink() {}
+
+	protected:
+		void sink_it_(const spdlog::details::log_msg& a_msg) override
+		{
+			spdlog::memory_buf_t formatted;
+			super::formatter_->format(a_msg, formatted);
+			WinAPI::OutputDebugStringA(fmt::to_string(formatted).c_str());
+		}
+
+		void flush_() override {}
+	};
+
+	using msvc_sink_mt = msvc_sink<std::mutex>;
+	using msvc_sink_st = msvc_sink<spdlog::details::null_mutex>;
+
+	using windebug_sink_mt = msvc_sink_mt;
+	using windebug_sink_st = msvc_sink_st;
+}
 #endif
 
 #define DLLEXPORT __declspec(dllexport)
 
-namespace logger = F4SE::log;
+namespace logger
+{
+	using namespace F4SE::log;
+}
 
 namespace stl
 {
@@ -86,6 +125,7 @@ namespace stl
 	};
 
 	using safe_string = basic_safe_string<char>;
+	extern template class basic_safe_string<char>;
 
 	class cistring_iterator :
 		public boost::iterator_facade<

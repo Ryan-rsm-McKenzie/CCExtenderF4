@@ -31,47 +31,56 @@ namespace CC
 			kForms
 		};
 
-		static void EnumerateFunctions(std::string_view a_matchstring)
+		template <class T, std::size_t N, class UnaryFunctor>
+		[[nodiscard]] static auto Enumerate(
+			std::string_view a_matchstring,
+			stl::span<T, N> a_src,
+			UnaryFunctor a_callback)
 		{
-			const auto enumerate = [&](stl::span<const RE::SCRIPT_FUNCTION> a_functions) {
-				boost::container::vector<bool> results(a_functions.size(), false);
-
-				std::for_each_n(
-					//std::execution::parallel_unsequenced_policy{},
-					a_functions.begin(),
-					a_functions.size(),
-					[&](const RE::SCRIPT_FUNCTION& a_elem) noexcept {
-						std::array<stl::safe_string, 2> todo{
-							a_elem.functionName,
-							a_elem.shortName
-						};
-
-						boost::algorithm::knuth_morris_pratt kmp{
-							stl::cistring_iterator{ a_matchstring.begin() },
-							stl::cistring_iterator{ a_matchstring.end() }
-						};
-
-						for (const auto& haystack : todo) {
-							const auto [first, last] = kmp(
-								stl::cistring_iterator{ haystack.begin() },
-								stl::cistring_iterator{ haystack.end() });
-							if (first != last) {
-								const auto pos = std::addressof(a_elem) - a_functions.begin();
-								results[pos] = true;
-							}
-						}
-					});
-
-				std::vector<const RE::SCRIPT_FUNCTION*> matched;
-				for (std::size_t i = 0; i < results.size(); ++i) {
-					if (results[i]) {
-						matched.push_back(a_functions.data() + i);
-					}
-				}
-				return matched;
+			boost::container::vector<bool> results(a_src.size(), false);
+			const boost::algorithm::knuth_morris_pratt kmp{
+				stl::cistring_iterator{ a_matchstring.begin() },
+				stl::cistring_iterator{ a_matchstring.end() }
 			};
 
-			const auto print = [](std::vector<const RE::SCRIPT_FUNCTION*> a_todo) {
+			std::for_each_n(
+				std::execution::parallel_unsequenced_policy{},
+				a_src.begin(),
+				a_src.size(),
+				[&](auto&& a_elem) noexcept {
+					for (const auto& haystack : a_callback(a_elem)) {
+						const auto [first, last] = kmp(
+							stl::cistring_iterator{ haystack.begin() },
+							stl::cistring_iterator{ haystack.end() });
+						if (first != last) {
+							const auto pos = std::addressof(a_elem) - a_src.data();
+							results[pos] = true;
+						}
+					}
+				});
+
+			std::vector<
+				std::conditional_t<
+					std::is_pointer_v<T>,
+					std::remove_const_t<T>,
+					T*>>
+				matched;
+			matched.reserve(a_src.size());
+			for (std::size_t i = 0; i < results.size(); ++i) {
+				if (results[i]) {
+					if constexpr (std::is_pointer_v<T>) {
+						matched.push_back(a_src[i]);
+					} else {
+						matched.push_back(a_src.data() + i);
+					}
+				}
+			}
+			return matched;
+		}
+
+		static void EnumerateFunctions(std::string_view a_matchstring)
+		{
+			const auto print = [](const std::vector<RE::SCRIPT_FUNCTION*>& a_todo) {
 				std::string line;
 				for (auto& elem : a_todo) {
 					line = stl::safe_string{ elem->functionName };
@@ -92,14 +101,61 @@ namespace CC
 				}
 			};
 
+			const auto functor = [](const RE::SCRIPT_FUNCTION& a_elem) noexcept {
+				return std::array<std::string_view, 2>{
+					stl::safe_string{ a_elem.functionName },
+					stl::safe_string{ a_elem.shortName }
+				};
+			};
+
 			Print("----CONSOLE COMMANDS--------------------\n"sv);
-			print(enumerate(RE::SCRIPT_FUNCTION::GetConsoleFunctions()));
+			print(Enumerate(
+				a_matchstring,
+				RE::SCRIPT_FUNCTION::GetConsoleFunctions(),
+				functor));
 
 			Print("----SCRIPT FUNCTIONS--------------------\n"sv);
-			print(enumerate(RE::SCRIPT_FUNCTION::GetScriptFunctions()));
+			print(Enumerate(
+				a_matchstring,
+				RE::SCRIPT_FUNCTION::GetScriptFunctions(),
+				functor));
 		}
 
-		static bool Execute(const RE::SCRIPT_PARAMETER* a_parameters, const char* a_compiledParams, RE::TESObjectREFR* a_refObject, RE::TESObjectREFR* a_container, RE::Script* a_script, RE::ScriptLocals* a_scriptLocals, float&, std::uint32_t& a_offset)
+		static void EnumerateGlobals([[maybe_unused]] std::string_view a_matchstring)
+		{
+			Print("----GLOBAL VARIABLES--------------------\n"sv);
+			const auto dataHandler = RE::TESDataHandler::GetSingleton();
+			const auto& globals = dataHandler->GetFormArray<RE::TESGlobal>();
+			const auto matches = Enumerate(
+				a_matchstring,
+				stl::span{ globals.begin(), globals.size() },
+				[](const RE::TESGlobal* a_global) noexcept {
+					boost::container::static_vector<std::string_view, 1> arr;
+					if (a_global) {
+						arr.emplace_back(a_global->formEditorID);
+					}
+					return arr;
+				});
+
+			std::string buf;
+			for (const auto match : matches) {
+				buf = fmt::format(
+					FMT_STRING("{} = {:0.2f}\n"sv),
+					static_cast<std::string_view>(match->formEditorID),
+					match->value);
+				Print(buf);
+			}
+		}
+
+		static bool Execute(
+			const RE::SCRIPT_PARAMETER* a_parameters,
+			const char* a_compiledParams,
+			RE::TESObjectREFR* a_refObject,
+			RE::TESObjectREFR* a_container,
+			RE::Script* a_script,
+			RE::ScriptLocals* a_scriptLocals,
+			float&,
+			std::uint32_t& a_offset)
 		{
 			auto [matchstring, filter, formtype] = Parse(a_parameters, a_compiledParams, a_offset, a_refObject, a_container, a_script, a_scriptLocals);
 
@@ -120,6 +176,15 @@ namespace CC
 			case Filter::kAll:
 			case Filter::kFunctions:
 				EnumerateFunctions(*matchstring);
+				break;
+			default:
+				break;
+			}
+
+			switch (*filter) {
+			case Filter::kAll:
+			case Filter::kGlobals:
+				EnumerateGlobals(*matchstring);
 				break;
 			default:
 				break;
