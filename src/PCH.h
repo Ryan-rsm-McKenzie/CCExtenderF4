@@ -192,6 +192,13 @@ namespace stl
 	private:
 		proxy_type _proxy;
 	};
+
+	template <class... Args>
+	auto make_array(Args&&... a_args)
+		-> std::array<std::common_type_t<Args...>, sizeof...(Args)>
+	{
+		return { std::forward<Args>(a_args)... };
+	}
 }
 
 using namespace std::literals;

@@ -29,6 +29,7 @@ namespace CC
 		{
 			kAll,
 			kFunctions,
+			kSettings,
 			kGlobals,
 			kForms
 		};
@@ -123,7 +124,7 @@ namespace CC
 				functor));
 		}
 
-		static void EnumerateGlobals([[maybe_unused]] std::string_view a_matchstring)
+		static void EnumerateGlobals(std::string_view a_matchstring)
 		{
 			Print("----GLOBAL VARIABLES--------------------\n"sv);
 			const auto dataHandler = RE::TESDataHandler::GetSingleton();
@@ -144,9 +145,89 @@ namespace CC
 			std::string buf;
 			for (const auto match : matches) {
 				buf = fmt::format(
-					FMT_STRING("{} = {:0.2f}\n"sv),
+					FMT_STRING("{} = {:0.2f}\n"),
 					*cache->find(match->GetFormID()),
 					match->value);
+				Print(buf);
+			}
+		}
+
+		static void EnumerateSettings(std::string_view a_matchstring)
+		{
+			Print("----SETTINGS----------------------------\n"sv);
+			robin_hood::unordered_flat_map<std::string_view, RE::Setting*> map;
+
+			const auto gmst = RE::GameSettingCollection::GetSingleton();
+			if (gmst) {
+				for (const auto& [name, setting] : gmst->settings) {
+					if (setting) {
+						map.insert_or_assign(name, setting);
+					}
+				}
+			}
+
+			const auto inis = stl::make_array(
+				RE::INISettingCollection::GetSingleton(),
+				RE::INIPrefSettingCollection::GetSingleton());
+			for (const auto ini : inis) {
+				if (ini) {
+					for (const auto setting : ini->settings) {
+						if (setting) {
+							map.insert_or_assign(setting->GetKey(), setting);
+						}
+					}
+				}
+			}
+
+			std::vector<decltype(map)::value_type> candidates(map.begin(), map.end());
+			const auto matches = Enumerate(
+				a_matchstring,
+				stl::span{ candidates.data(), candidates.size() },
+				[](auto&& a_elem) {
+					return std::array{ a_elem.first };
+				});
+
+			std::string buf;
+			for (const auto match : matches) {
+				const auto& [name, setting] = *match;
+				using Type = RE::Setting::SETTING_TYPE;
+				switch (setting->GetType()) {
+				case Type::kBinary:
+					buf = fmt::format(FMT_STRING("{} = {}\n"), name, setting->GetBinary());
+					break;
+				case Type::kChar:
+					buf = fmt::format(FMT_STRING("{} = {}\n"), name, setting->GetChar());
+					break;
+				case Type::kUChar:
+					buf = fmt::format(FMT_STRING("{} = {:#04x}\n"), name, setting->GetUChar());
+					break;
+				case Type::kInt:
+					buf = fmt::format(FMT_STRING("{} = {}\n"), name, setting->GetInt());
+					break;
+				case Type::kUInt:
+					buf = fmt::format(FMT_STRING("{} = {}\n"), name, setting->GetUInt());
+					break;
+				case Type::kFloat:
+					buf = fmt::format(FMT_STRING("{} = {:0.2f}\n"), name, setting->GetFloat());
+					break;
+				case Type::kString:
+					buf = fmt::format(FMT_STRING("{} = {}\n"), name, setting->GetString());
+					break;
+				case Type::kRGB:
+					{
+						const auto rgb = setting->GetRGB();
+						buf = fmt::format(FMT_STRING("{} = R:{} G:{} B:{}\n"), name, rgb[0], rgb[1], rgb[2]);
+					}
+				case Type::kRGBA:
+					{
+						const auto rgba = setting->GetRGBA();
+						buf = fmt::format(FMT_STRING("{} = R:{} G:{} B:{} A:{}\n"), name, rgba[0], rgba[1], rgba[2], rgba[3]);
+					}
+					break;
+				default:
+					buf = fmt::format(FMT_STRING("{} = <UNKNOWN>\n"), name);
+					break;
+				}
 				Print(buf);
 			}
 		}
@@ -176,22 +257,16 @@ namespace CC
 				filter = Filter::kAll;
 			}
 
-			switch (*filter) {
-			case Filter::kAll:
-			case Filter::kFunctions:
+			if (*filter == Filter::kAll || *filter == Filter::kFunctions) {
 				EnumerateFunctions(*matchstring);
-				break;
-			default:
-				break;
 			}
 
-			switch (*filter) {
-			case Filter::kAll:
-			case Filter::kGlobals:
+			if (*filter == Filter::kAll || *filter == Filter::kSettings) {
+				EnumerateSettings(*matchstring);
+			}
+
+			if (*filter == Filter::kAll || *filter == Filter::kGlobals) {
 				EnumerateGlobals(*matchstring);
-				break;
-			default:
-				break;
 			}
 
 			return true;
