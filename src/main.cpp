@@ -1,4 +1,5 @@
 #include "CC/CC.h"
+#include "EditorIDCache.h"
 
 extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
 {
@@ -51,6 +52,7 @@ extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f
 	F4SE::Init(a_f4se);
 
 	CC::Install();
+	EditorIDCache::get().install();
 
 	return true;
 }

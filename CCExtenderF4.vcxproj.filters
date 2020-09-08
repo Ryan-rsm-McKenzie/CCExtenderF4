@@ -29,6 +29,9 @@
     <ClInclude Include="src\CC\Help.h">
       <Filter>src\CC</Filter>
     </ClInclude>
+    <ClInclude Include="src\EditorIDCache.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\PCH.h">
       <Filter>src</Filter>
     </ClInclude>

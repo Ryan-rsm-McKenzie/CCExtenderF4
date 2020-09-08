@@ -1,5 +1,7 @@
 #pragma once
 
+#include "EditorIDCache.h"
+
 namespace CC
 {
 	class Help
@@ -126,13 +128,15 @@ namespace CC
 			Print("----GLOBAL VARIABLES--------------------\n"sv);
 			const auto dataHandler = RE::TESDataHandler::GetSingleton();
 			const auto& globals = dataHandler->GetFormArray<RE::TESGlobal>();
+			const auto cache = EditorIDCache::get().access();
 			const auto matches = Enumerate(
 				a_matchstring,
 				stl::span{ globals.begin(), globals.size() },
-				[](const RE::TESGlobal* a_global) noexcept {
+				[&](const RE::TESGlobal* a_global) noexcept {
 					boost::container::static_vector<std::string_view, 1> arr;
-					if (a_global) {
-						arr.emplace_back(a_global->formEditorID);
+					const auto editorID = a_global ? cache->find(a_global->GetFormID()) : nullptr;
+					if (editorID) {
+						arr.emplace_back(*editorID);
 					}
 					return arr;
 				});
@@ -141,7 +145,7 @@ namespace CC
 			for (const auto match : matches) {
 				buf = fmt::format(
 					FMT_STRING("{} = {:0.2f}\n"sv),
-					static_cast<std::string_view>(match->formEditorID),
+					*cache->find(match->GetFormID()),
 					match->value);
 				Print(buf);
 			}

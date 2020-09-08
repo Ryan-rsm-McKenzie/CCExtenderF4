@@ -1,22 +1,32 @@
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable : 4200 4324 5053)
 #include "F4SE/F4SE.h"
 #include "RE/Fallout.h"
+#pragma warning(pop)
 
 #include <algorithm>
 #include <array>
 #include <execution>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <typeinfo>
 
 #include <boost/algorithm/searching/knuth_morris_pratt.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+
+#pragma warning(push)
+#pragma warning(disable : 4702)
+#include <robin_hood.h>
+#pragma warning(pop)
 
 #ifdef NDEBUG
 #include <spdlog/sinks/basic_file_sink.h>
