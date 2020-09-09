@@ -11,10 +11,11 @@ namespace CC
 			const auto it = std::find_if(
 				functions.begin(),
 				functions.end(),
-				[&](auto&& a_elem) { return _stricmp(a_elem.functionName, "DumpNiUpdates") == 0; });
+				[&](auto&& a_elem) {
+					return _stricmp(a_elem.functionName, "DumpNiUpdates") == 0;
+				});
 			if (it != functions.end()) {
-				it->functionName = LONG_NAME.data();
-				it->shortName = SHORT_NAME.data();
+				*it = RE::SCRIPT_FUNCTION{ LONG_NAME.data(), SHORT_NAME.data(), it->output };
 				it->helpString = HelpString().data();
 				it->executeFunction = Execute;
 

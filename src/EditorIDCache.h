@@ -33,6 +33,18 @@ public:
 			return _formID2EditorID.insert_or_assign(a_key, a_mapped).second;
 		}
 
+	protected:
+		friend class EditorIDCache;
+
+		Cache() = default;
+		Cache(const Cache&) = default;
+		Cache(Cache&&) = default;
+
+		~Cache() = default;
+
+		Cache& operator=(const Cache&) = default;
+		Cache& operator=(Cache&&) = default;
+
 	private:
 		robin_hood::unordered_flat_map<key_type, mapped_type> _formID2EditorID;
 	};
@@ -248,6 +260,15 @@ public:
 	}
 
 private:
+	EditorIDCache() = default;
+	EditorIDCache(const EditorIDCache&) = delete;
+	EditorIDCache(EditorIDCache&&) = delete;
+
+	~EditorIDCache() = default;
+
+	EditorIDCache& operator=(const EditorIDCache&) = delete;
+	EditorIDCache& operator=(EditorIDCache&&) = delete;
+
 	template <class T>
 	class Hook
 	{

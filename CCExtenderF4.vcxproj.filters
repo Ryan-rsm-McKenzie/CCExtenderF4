@@ -32,6 +32,9 @@
     <ClInclude Include="src\EditorIDCache.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\FormTypeMap.h">
+      <Filter>src</Filter>
+    </ClInclude>
     <ClInclude Include="src\PCH.h">
       <Filter>src</Filter>
     </ClInclude>

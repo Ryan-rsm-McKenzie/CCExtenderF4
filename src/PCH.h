@@ -18,13 +18,12 @@
 #include <type_traits>
 #include <typeinfo>
 
+#pragma warning(push)
+#pragma warning(disable : 4702)
 #include <boost/algorithm/searching/knuth_morris_pratt.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-
-#pragma warning(push)
-#pragma warning(disable : 4702)
 #include <robin_hood.h>
 #pragma warning(pop)
 
@@ -81,6 +80,7 @@ namespace stl
 	using F4SE::stl::report_and_fail;
 	using F4SE::stl::span;
 	using F4SE::stl::zstring;
+	using F4SE::util::to_underlying;
 
 	[[nodiscard]] constexpr char tolower(char a_ch) noexcept
 	{
@@ -92,6 +92,24 @@ namespace stl
 
 			for (unsigned char i = 'A'; i <= 'Z'; ++i) {
 				buf[static_cast<std::size_t>(i)] = static_cast<char>(i + 32);
+			}
+
+			return buf;
+		}();
+
+		return table[static_cast<unsigned char>(a_ch)];
+	}
+
+	[[nodiscard]] constexpr char toupper(char a_ch) noexcept
+	{
+		constexpr auto table = []() noexcept {
+			std::array<char, std::numeric_limits<unsigned char>::max() + 1> buf{ '\0' };
+			for (std::size_t i = 0; i < buf.size(); ++i) {
+				buf[i] = static_cast<char>(i);
+			}
+
+			for (unsigned char i = 'a'; i <= 'z'; ++i) {
+				buf[static_cast<std::size_t>(i)] = static_cast<char>(i - 32);
 			}
 
 			return buf;

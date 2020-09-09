@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EditorIDCache.h"
+#include "FormTypeMap.h"
 
 namespace CC
 {
@@ -13,9 +14,20 @@ namespace CC
 			const auto it = std::find_if(
 				functions.begin(),
 				functions.end(),
-				[&](auto&& a_elem) { return _stricmp(a_elem.functionName, LONG_NAME.data()) == 0; });
+				[&](auto&& a_elem) {
+					return _stricmp(a_elem.functionName, LONG_NAME.data()) == 0;
+				});
 			if (it != functions.end()) {
+				static std::array params{
+					RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
+					RE::SCRIPT_PARAMETER{ "Integer (Optional)", RE::SCRIPT_PARAM_TYPE::kInt, true },
+					RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
+				};
+
+				*it = RE::SCRIPT_FUNCTION{ LONG_NAME.data(), SHORT_NAME.data(), it->output };
 				it->helpString = HelpString().data();
+				it->paramCount = static_cast<std::uint16_t>(params.size());
+				it->parameters = params.data();
 				it->executeFunction = Execute;
 
 				logger::info("installed {}", LONG_NAME);
@@ -31,7 +43,9 @@ namespace CC
 			kFunctions,
 			kSettings,
 			kGlobals,
-			kForms
+			kForms,
+
+			kTotal
 		};
 
 		template <class T, std::size_t N, class UnaryFunctor>
@@ -42,12 +56,12 @@ namespace CC
 		{
 			boost::container::vector<bool> results(a_src.size(), false);
 			const boost::algorithm::knuth_morris_pratt kmp{
-				stl::cistring_iterator{ a_matchstring.begin() },
-				stl::cistring_iterator{ a_matchstring.end() }
+				a_matchstring.begin(),
+				a_matchstring.end()
 			};
 
 			std::for_each_n(
-				std::execution::parallel_unsequenced_policy{},
+				//std::execution::parallel_unsequenced_policy{},
 				a_src.begin(),
 				a_src.size(),
 				[&](auto&& a_elem) noexcept {
@@ -81,6 +95,97 @@ namespace CC
 			return matched;
 		}
 
+		static void EnumerateForms(std::string_view a_matchstring, std::optional<RE::ENUM_FORM_ID> a_formtype)
+		{
+			Print("----OTHER FORMS--------------------\n"sv);
+			const auto [allForms, allFormsMapLock] = RE::TESForm::GetAllForms();
+			RE::BSAutoReadLock l{ allFormsMapLock };
+			if (allForms) {
+				std::vector<RE::TESForm*> candidates;
+				std::for_each(
+					allForms->begin(),
+					allForms->end(),
+					[&](auto&& a_elem) {
+						if (const auto form = a_elem.second;
+							form && (!a_formtype || form->GetFormType() == *a_formtype)) {
+							candidates.push_back(form);
+						}
+					});
+
+				const auto idCache = EditorIDCache::get().access();
+				auto matches = Enumerate(
+					a_matchstring,
+					stl::span{ candidates.data(), candidates.size() },
+					[&](auto&& a_form) {
+						boost::container::static_vector<std::string_view, 3> arr;
+						if (const auto editorID = idCache->find(a_form->GetFormID()); editorID) {
+							arr.emplace_back(*editorID);
+						}
+#if 0
+						if (const auto fullName = RE::TESFullName::GetFullName(*a_form, true); !fullName.empty()) {
+							arr.emplace_back(fullName);
+						}
+#endif
+						if (const auto overName = [&]() {
+								const auto lvli = a_form->As<RE::TESLeveledList>();
+								return lvli ? stl::safe_string(lvli->GetOverrideName()) : ""sv;
+							}();
+							!overName.empty()) {
+							arr.emplace_back(overName);
+						}
+						return arr;
+					});
+
+				std::sort(
+					matches.begin(),
+					matches.end(),
+					[](auto&& a_lhs, auto&& a_rhs) noexcept {
+						return a_lhs->GetFormType() != a_rhs->GetFormType() ?
+									 a_lhs->GetFormType() < a_rhs->GetFormType() :
+									 a_lhs->GetFormID() < a_rhs->GetFormID();
+					});
+				const auto& formTypeMap = FormTypeMap::get();
+				std::string buf;
+				for (const auto match : matches) {
+					buf.clear();
+					if (const auto filename = [&]() {
+							const auto file = match->GetDescriptionOwnerFile();
+							return file ? file->GetFilename() : ""sv;
+						}();
+						!filename.empty()) {
+						buf += filename;
+						buf += ' ';
+					}
+
+					if (const auto typeString = formTypeMap.find(match->GetFormType());
+						typeString) {
+						buf += *typeString;
+					}
+
+					buf += ':';
+
+					if (const auto editorID = idCache->find(match->GetFormID());
+						editorID) {
+						buf += ' ';
+						buf += *editorID;
+					}
+
+					buf += fmt::format(FMT_STRING(" ({:08X})"), match->GetFormID());
+
+#if 0
+					if (const auto fullName = RE::TESFullName::GetFullName(*match, true);
+						!fullName.empty()) {
+						buf += ' ';
+						buf += fullName;
+					}
+#endif
+
+					buf += '\n';
+					Print(buf);
+				}
+			}
+		}
+
 		static void EnumerateFunctions(std::string_view a_matchstring)
 		{
 			const auto print = [](const std::vector<RE::SCRIPT_FUNCTION*>& a_todo) {
@@ -105,7 +210,7 @@ namespace CC
 			};
 
 			const auto functor = [](const RE::SCRIPT_FUNCTION& a_elem) noexcept {
-				return std::array<std::string_view, 2>{
+				return std::array{
 					stl::safe_string{ a_elem.functionName },
 					stl::safe_string{ a_elem.shortName }
 				};
@@ -130,7 +235,7 @@ namespace CC
 			const auto dataHandler = RE::TESDataHandler::GetSingleton();
 			const auto& globals = dataHandler->GetFormArray<RE::TESGlobal>();
 			const auto cache = EditorIDCache::get().access();
-			const auto matches = Enumerate(
+			auto matches = Enumerate(
 				a_matchstring,
 				stl::span{ globals.begin(), globals.size() },
 				[&](const RE::TESGlobal* a_global) noexcept {
@@ -142,6 +247,12 @@ namespace CC
 					return arr;
 				});
 
+			std::sort(
+				matches.begin(),
+				matches.end(),
+				[](auto&& a_lhs, auto&& a_rhs) {
+					return a_lhs->GetFormID() < a_rhs->GetFormID();
+				});
 			std::string buf;
 			for (const auto match : matches) {
 				buf = fmt::format(
@@ -155,38 +266,45 @@ namespace CC
 		static void EnumerateSettings(std::string_view a_matchstring)
 		{
 			Print("----SETTINGS----------------------------\n"sv);
-			robin_hood::unordered_flat_map<std::string_view, RE::Setting*> map;
 
-			const auto gmst = RE::GameSettingCollection::GetSingleton();
-			if (gmst) {
-				for (const auto& [name, setting] : gmst->settings) {
-					if (setting) {
-						map.insert_or_assign(name, setting);
-					}
-				}
-			}
-
-			const auto inis = stl::make_array(
-				RE::INISettingCollection::GetSingleton(),
-				RE::INIPrefSettingCollection::GetSingleton());
-			for (const auto ini : inis) {
-				if (ini) {
-					for (const auto setting : ini->settings) {
-						if (setting) {
-							map.insert_or_assign(setting->GetKey(), setting);
+			auto candidates = []() {
+				robin_hood::unordered_flat_map<std::string_view, RE::Setting*> map;
+				const auto inis = stl::make_array(
+					RE::INISettingCollection::GetSingleton(),
+					RE::INIPrefSettingCollection::GetSingleton());
+				for (const auto ini : inis) {
+					if (ini) {
+						for (const auto setting : ini->settings) {
+							if (setting) {
+								map.insert_or_assign(setting->GetKey(), setting);
+							}
 						}
 					}
 				}
+				return std::vector<decltype(map)::value_type>{ map.begin(), map.end() };
+			}();
+
+			if (const auto gmst = RE::GameSettingCollection::GetSingleton(); gmst) {
+				for (const auto& [name, setting] : gmst->settings) {
+					if (setting) {
+						candidates.emplace_back(name, setting);
+					}
+				}
 			}
 
-			std::vector<decltype(map)::value_type> candidates(map.begin(), map.end());
-			const auto matches = Enumerate(
+			auto matches = Enumerate(
 				a_matchstring,
 				stl::span{ candidates.data(), candidates.size() },
 				[](auto&& a_elem) {
 					return std::array{ a_elem.first };
 				});
 
+			std::sort(
+				matches.begin(),
+				matches.end(),
+				[](auto&& a_lhs, auto&& a_rhs) {
+					return _stricmp(a_lhs->first.data(), a_rhs->first.data()) < 0;
+				});
 			std::string buf;
 			for (const auto match : matches) {
 				const auto& [name, setting] = *match;
@@ -247,10 +365,28 @@ namespace CC
 			if (!matchstring) {
 				Print(HelpString() + '\n');
 				return true;
-			} else {
-				for (auto& ch : *matchstring) {
-					ch = stl::tolower(ch);
-				}
+			} else if (filter && (*filter < static_cast<Filter>(0) || *filter >= Filter::kTotal)) {
+				Print("<filter> must be a valid filter\n"sv);
+				return true;
+			} else if (formtype && formtype->length() != 4) {
+				Print("<form-type> must be 4 characters in length\n"sv);
+				return true;
+			} else if ([](std::optional<std::string>& a_formtype) {
+						   if (a_formtype) {
+							   for (auto& ch : *a_formtype) {
+								   ch = stl::toupper(ch);
+							   }
+							   return !FormTypeMap::get().find(*a_formtype);
+						   } else {
+							   return false;
+						   }
+					   }(formtype)) {
+				Print("<form-type> must be a valid form type\n"sv);
+				return true;
+			}
+
+			for (auto& ch : *matchstring) {
+				ch = stl::tolower(ch);
 			}
 
 			if (!filter) {
@@ -267,6 +403,12 @@ namespace CC
 
 			if (*filter == Filter::kAll || *filter == Filter::kGlobals) {
 				EnumerateGlobals(*matchstring);
+			}
+
+			if (*filter == Filter::kAll || *filter == Filter::kForms) {
+				EnumerateForms(
+					*matchstring,
+					(formtype ? FormTypeMap::get().find(*formtype) : std::nullopt));
 			}
 
 			return true;
@@ -350,5 +492,6 @@ namespace CC
 		}
 
 		static constexpr auto LONG_NAME = "Help"sv;
+		static constexpr auto SHORT_NAME = ""sv;
 	};
 }
