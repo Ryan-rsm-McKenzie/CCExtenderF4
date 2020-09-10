@@ -118,42 +118,7 @@ namespace stl
 		return table[static_cast<unsigned char>(a_ch)];
 	}
 
-	template <
-		class CharT,
-		class Traits = std::char_traits<CharT>>
-	class basic_safe_string :
-		public std::basic_string_view<CharT, Traits>
-	{
-	private:
-		using super = std::basic_string_view<CharT, Traits>;
-
-	public:
-		using traits_type = typename super::traits_type;
-		using value_type = typename super::value_type;
-		using pointer = typename super::pointer;
-		using const_pointer = typename super::const_pointer;
-		using reference = typename super::reference;
-		using const_reference = typename super::const_reference;
-		using const_iterator = typename super::const_iterator;
-		using iterator = typename super::iterator;
-		using const_reverse_iterator = typename super::const_reverse_iterator;
-		using reverse_iterator = typename super::reverse_iterator;
-		using size_type = typename super::size_type;
-		using difference_type = typename super::difference_type;
-
-		constexpr basic_safe_string(const_pointer a_str) :
-			super(a_str ? a_str : EMPTY)
-		{}
-
-		using super::super;
-		using super::operator=;
-
-	private:
-		static constexpr value_type EMPTY[] = { static_cast<value_type>(0) };
-	};
-
-	using safe_string = basic_safe_string<char>;
-	extern template class basic_safe_string<char>;
+	[[nodiscard]] inline std::string_view safe_string(const char* a_str) noexcept { return a_str ? a_str : ""; }
 
 	class cistring_iterator :
 		public boost::iterator_facade<

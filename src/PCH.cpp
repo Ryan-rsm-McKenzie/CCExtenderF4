@@ -51,8 +51,3 @@ namespace WinAPI
 		::OutputDebugStringA(static_cast<::LPCSTR>(a_outputString));
 	}
 }
-
-namespace stl
-{
-	template class basic_safe_string<char>;
-}

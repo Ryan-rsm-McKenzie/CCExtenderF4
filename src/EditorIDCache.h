@@ -285,7 +285,7 @@ private:
 			if (a_this && !a_this->IsCreated()) {
 				EditorIDCache::get().access()->insert(
 					a_this->GetFormID(),
-					stl::safe_string{ a_editorID });
+					stl::safe_string(a_editorID));
 			}
 
 			return _original(a_this, a_editorID);

@@ -61,7 +61,7 @@ namespace CC
 			};
 
 			std::for_each_n(
-				//std::execution::parallel_unsequenced_policy{},
+				std::execution::parallel_unsequenced_policy{},
 				a_src.begin(),
 				a_src.size(),
 				[&](auto&& a_elem) noexcept {
@@ -112,26 +112,26 @@ namespace CC
 						}
 					});
 
+				const auto getDisplayName = [](RE::TESForm& a_form) {
+					auto displayName = RE::TESFullName::GetFullName(a_form, true);
+					if (displayName.empty()) {
+						const auto lvli = a_form.As<RE::TESLeveledList>();
+						displayName = lvli ? stl::safe_string(lvli->GetOverrideName()) : ""sv;
+					}
+					return displayName;
+				};
+
 				const auto idCache = EditorIDCache::get().access();
 				auto matches = Enumerate(
 					a_matchstring,
 					stl::span{ candidates.data(), candidates.size() },
 					[&](auto&& a_form) {
-						boost::container::static_vector<std::string_view, 3> arr;
+						boost::container::static_vector<std::string_view, 2> arr;
 						if (const auto editorID = idCache->find(a_form->GetFormID()); editorID) {
 							arr.emplace_back(*editorID);
 						}
-#if 0
-						if (const auto fullName = RE::TESFullName::GetFullName(*a_form, true); !fullName.empty()) {
-							arr.emplace_back(fullName);
-						}
-#endif
-						if (const auto overName = [&]() {
-								const auto lvli = a_form->As<RE::TESLeveledList>();
-								return lvli ? stl::safe_string(lvli->GetOverrideName()) : ""sv;
-							}();
-							!overName.empty()) {
-							arr.emplace_back(overName);
+						if (const auto displayName = getDisplayName(*a_form); !displayName.empty()) {
+							arr.push_back(displayName);
 						}
 						return arr;
 					});
@@ -172,13 +172,11 @@ namespace CC
 
 					buf += fmt::format(FMT_STRING(" ({:08X})"), match->GetFormID());
 
-#if 0
-					if (const auto fullName = RE::TESFullName::GetFullName(*match, true);
-						!fullName.empty()) {
+					if (const auto displayName = getDisplayName(*match);
+						!displayName.empty()) {
 						buf += ' ';
-						buf += fullName;
+						buf += displayName;
 					}
-#endif
 
 					buf += '\n';
 					Print(buf);
@@ -191,15 +189,17 @@ namespace CC
 			const auto print = [](const std::vector<RE::SCRIPT_FUNCTION*>& a_todo) {
 				std::string line;
 				for (auto& elem : a_todo) {
-					line = stl::safe_string{ elem->functionName };
+					line = stl::safe_string(elem->functionName);
 
-					if (const stl::safe_string shortName = elem->shortName; !shortName.empty()) {
+					if (const auto shortName = stl::safe_string(elem->shortName);
+						!shortName.empty()) {
 						line += " ("sv;
 						line += shortName;
 						line += ')';
 					}
 
-					if (const stl::safe_string helpString = elem->helpString; !helpString.empty()) {
+					if (const auto helpString = stl::safe_string(elem->helpString);
+						!helpString.empty()) {
 						line += " -> "sv;
 						line += helpString;
 					}
@@ -211,8 +211,8 @@ namespace CC
 
 			const auto functor = [](const RE::SCRIPT_FUNCTION& a_elem) noexcept {
 				return std::array{
-					stl::safe_string{ a_elem.functionName },
-					stl::safe_string{ a_elem.shortName }
+					stl::safe_string(a_elem.functionName),
+					stl::safe_string(a_elem.shortName)
 				};
 			};
 
