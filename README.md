@@ -23,7 +23,7 @@
 ## Help
 
 **Command**: `"Help" <expr>`  
-**Description**: Performs a substring search on all forms by (override) name and editor ID.  
+**Description**: Performs a substring search on all forms by (override) name and editor ID. This reimplementation is noticably faster and more accurate than the original version.  
 **Example Usage**: `help laser 4 weap`  
 **Grammar**:
 ```
