@@ -3,8 +3,9 @@
 * [Build Dependencies](#build-dependencies)
 * [End User Dependencies](#end-user-dependencies)
 * [Console commands](#console-commands)
-	* [Help](#help)
 	* [Clear](#clear)
+	* [CrashToDesktop](#crashtodesktop)
+	* [Help](#help)
 
 # Build Dependencies
 * [Boost](https://www.boost.org/)
@@ -20,6 +21,16 @@
 * [F4SE](https://f4se.silverlock.org/)
 
 # Console Commands
+
+## Clear
+**Command**: `"Clear"`  
+**Description**: Clears the console output.  
+**Example Usage**: `clear`
+
+## CrashToDesktop
+**Command**: `"CrashToDesktop" | "CTD"`  
+**Description**: Forcibly crashes the game. Does not work in the main menu. 
+**Example Usage**: `ctd`
 
 ## Help
 
@@ -38,8 +49,3 @@
 	; 4 - Forms
 <form-type> ::= <string> ; The form type to filter form results with
 ```
-
-## Clear
-**Command**: `"Clear"`  
-**Description**: Clears the console output.  
-**Example Usage**: `clear`

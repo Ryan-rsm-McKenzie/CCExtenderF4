@@ -26,6 +26,9 @@
     <ClInclude Include="src\CC\Clear.h">
       <Filter>src\CC</Filter>
     </ClInclude>
+    <ClInclude Include="src\CC\CrashToDesktop.h">
+      <Filter>src\CC</Filter>
+    </ClInclude>
     <ClInclude Include="src\CC\Help.h">
       <Filter>src\CC</Filter>
     </ClInclude>

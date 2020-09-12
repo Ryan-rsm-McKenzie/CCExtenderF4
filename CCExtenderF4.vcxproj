@@ -236,6 +236,7 @@ copy "$(TargetDir)$(TargetName).pdb" "$(Fallout4Path)\Data\F4SE\Plugins\$(Target
   <ItemGroup>
     <ClInclude Include="src\CC\CC.h" />
     <ClInclude Include="src\CC\Clear.h" />
+    <ClInclude Include="src\CC\CrashToDesktop.h" />
     <ClInclude Include="src\CC\Help.h" />
     <ClInclude Include="src\EditorIDCache.h" />
     <ClInclude Include="src\FormTypeMap.h" />
