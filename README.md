@@ -23,17 +23,19 @@
 # Console Commands
 
 ## Clear
+**Version**: 1.0.0  
 **Command**: `"Clear"`  
 **Description**: Clears the console output.  
 **Example Usage**: `clear`
 
 ## CrashToDesktop
+**Version**: 1.1.0  
 **Command**: `"CrashToDesktop" | "CTD"`  
 **Description**: Forcibly crashes the game. Does not work in the main menu.  
 **Example Usage**: `ctd`
 
 ## Help
-
+**Version**: 1.0.0  
 **Command**: `"Help" <expr>`  
 **Description**: Performs a substring search on all forms by (override) name and editor ID. This reimplementation is noticably faster and more accurate than the original version.  
 **Example Usage**: `help laser 4 weap`  
