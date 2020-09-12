@@ -29,7 +29,7 @@
 
 ## CrashToDesktop
 **Command**: `"CrashToDesktop" | "CTD"`  
-**Description**: Forcibly crashes the game. Does not work in the main menu. 
+**Description**: Forcibly crashes the game. Does not work in the main menu.  
 **Example Usage**: `ctd`
 
 ## Help
