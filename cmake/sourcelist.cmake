@@ -1,0 +1,11 @@
+set(SOURCES
+	src/CC/CC.cpp
+	src/CC/CC.h
+	src/CC/Clear.h
+	src/CC/CrashToDesktop.h
+	src/CC/Help.h
+	src/EditorIDCache.h
+	src/FormTypeMap.h
+	src/PCH.h
+	src/main.cpp
+)

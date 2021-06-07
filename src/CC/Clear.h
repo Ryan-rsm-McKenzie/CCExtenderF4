@@ -1,32 +1,13 @@
 #pragma once
 
-namespace CC
+namespace CC::Clear
 {
-	class Clear
+	namespace detail
 	{
-	public:
-		static void Install()
-		{
-			const auto functions = RE::SCRIPT_FUNCTION::GetConsoleFunctions();
-			const auto it = std::find_if(
-				functions.begin(),
-				functions.end(),
-				[&](auto&& a_elem) {
-					return _stricmp(a_elem.functionName, "DumpNiUpdates") == 0;
-				});
-			if (it != functions.end()) {
-				*it = RE::SCRIPT_FUNCTION{ LONG_NAME.data(), SHORT_NAME.data(), it->output };
-				it->helpString = HelpString().data();
-				it->executeFunction = Execute;
+		inline constexpr auto LONG_NAME = "Clear"sv;
+		inline constexpr auto SHORT_NAME = ""sv;
 
-				logger::info("installed {}", LONG_NAME);
-			} else {
-				stl::report_and_fail("failed to find function"sv);
-			}
-		}
-
-	private:
-		static bool Execute(const RE::SCRIPT_PARAMETER*, const char*, RE::TESObjectREFR*, RE::TESObjectREFR*, RE::Script*, RE::ScriptLocals*, float&, std::uint32_t&)
+		inline bool Execute(const RE::SCRIPT_PARAMETER*, const char*, RE::TESObjectREFR*, RE::TESObjectREFR*, RE::Script*, RE::ScriptLocals*, float&, std::uint32_t&)
 		{
 			const auto task = F4SE::GetTaskInterface();
 			task->AddUITask([]() {
@@ -40,7 +21,7 @@ namespace CC
 			return true;
 		}
 
-		[[nodiscard]] static const std::string& HelpString()
+		[[nodiscard]] inline const std::string& HelpString()
 		{
 			static auto help = []() {
 				std::string buf;
@@ -49,8 +30,25 @@ namespace CC
 			}();
 			return help;
 		}
+	}
 
-		static constexpr auto LONG_NAME = "Clear"sv;
-		static constexpr auto SHORT_NAME = ""sv;
-	};
+	inline void Install()
+	{
+		const auto functions = RE::SCRIPT_FUNCTION::GetConsoleFunctions();
+		const auto it = std::find_if(
+			functions.begin(),
+			functions.end(),
+			[&](auto&& a_elem) {
+				return _stricmp(a_elem.functionName, "DumpNiUpdates") == 0;
+			});
+		if (it != functions.end()) {
+			*it = RE::SCRIPT_FUNCTION{ detail::LONG_NAME.data(), detail::SHORT_NAME.data(), it->output };
+			it->helpString = detail::HelpString().data();
+			it->executeFunction = detail::Execute;
+
+			logger::debug("installed {}", detail::LONG_NAME);
+		} else {
+			stl::report_and_fail("failed to find function"sv);
+		}
+	}
 }

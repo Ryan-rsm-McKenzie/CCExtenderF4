@@ -12,6 +12,6 @@ namespace CC
 		CrashToDesktop::Install();
 		Help::Install();
 
-		logger::info("installed all console commands"sv);
+		logger::debug("installed all console commands"sv);
 	}
 }

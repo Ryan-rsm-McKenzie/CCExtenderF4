@@ -1,10 +1,7 @@
 #pragma once
 
-#pragma warning(push)
-#pragma warning(disable : 4200 4324 5053)
 #include "F4SE/F4SE.h"
 #include "RE/Fallout.h"
-#pragma warning(pop)
 
 #include <algorithm>
 #include <array>
@@ -12,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -19,68 +17,30 @@
 #include <typeinfo>
 
 #pragma warning(push)
-#pragma warning(disable : 4702)
 #include <boost/algorithm/searching/knuth_morris_pratt.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <robin_hood.h>
-#pragma warning(pop)
 
 #ifdef NDEBUG
-#include <spdlog/sinks/basic_file_sink.h>
+#	include <spdlog/sinks/basic_file_sink.h>
 #else
-#include <spdlog/sinks/base_sink.h>
-
-namespace WinAPI
-{
-	void OutputDebugStringA(const char* a_outputString);
-}
-
-namespace logger
-{
-	template <class Mutex>
-	class msvc_sink :
-		public spdlog::sinks::base_sink<Mutex>
-	{
-	private:
-		using super = spdlog::sinks::base_sink<Mutex>;
-
-	public:
-		explicit msvc_sink() {}
-
-	protected:
-		void sink_it_(const spdlog::details::log_msg& a_msg) override
-		{
-			spdlog::memory_buf_t formatted;
-			super::formatter_->format(a_msg, formatted);
-			WinAPI::OutputDebugStringA(fmt::to_string(formatted).c_str());
-		}
-
-		void flush_() override {}
-	};
-
-	using msvc_sink_mt = msvc_sink<std::mutex>;
-	using msvc_sink_st = msvc_sink<spdlog::details::null_mutex>;
-
-	using windebug_sink_mt = msvc_sink_mt;
-	using windebug_sink_st = msvc_sink_st;
-}
+#	include <spdlog/sinks/msvc_sink.h>
 #endif
+#pragma warning(pop)
 
 #define DLLEXPORT __declspec(dllexport)
 
-namespace logger
-{
-	using namespace F4SE::log;
-}
+using namespace std::literals;
+
+namespace logger = F4SE::log;
 
 namespace stl
 {
 	using F4SE::stl::report_and_fail;
-	using F4SE::stl::span;
+	using F4SE::stl::to_underlying;
 	using F4SE::stl::zstring;
-	using F4SE::util::to_underlying;
 
 	[[nodiscard]] constexpr char tolower(char a_ch) noexcept
 	{
@@ -184,4 +144,4 @@ namespace stl
 	}
 }
 
-using namespace std::literals;
+#include "Version.h"

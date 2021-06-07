@@ -85,6 +85,12 @@ public:
 		value_type& _proxy;
 	};
 
+	EditorIDCache(const EditorIDCache&) = delete;
+	EditorIDCache(EditorIDCache&&) = delete;
+
+	EditorIDCache& operator=(const EditorIDCache&) = delete;
+	EditorIDCache& operator=(EditorIDCache&&) = delete;
+
 	[[nodiscard]] static EditorIDCache& get()
 	{
 		static EditorIDCache singleton;
@@ -256,18 +262,12 @@ public:
 		Hook<RE::BGSLensFlare>::Install();
 		Hook<RE::BGSGodRays>::Install();
 
-		logger::info("installed hooks for {}"sv, typeid(EditorIDCache).name());
+		logger::debug("installed hooks for {}"sv, typeid(EditorIDCache).name());
 	}
 
 private:
 	EditorIDCache() = default;
-	EditorIDCache(const EditorIDCache&) = delete;
-	EditorIDCache(EditorIDCache&&) = delete;
-
 	~EditorIDCache() = default;
-
-	EditorIDCache& operator=(const EditorIDCache&) = delete;
-	EditorIDCache& operator=(EditorIDCache&&) = delete;
 
 	template <class T>
 	class Hook

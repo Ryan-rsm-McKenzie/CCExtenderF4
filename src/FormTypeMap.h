@@ -1,13 +1,16 @@
 #pragma once
 
-#pragma push_macro("ELEMENT")
-#define ELEMENT(a_elem) std::make_pair(#a_elem##sv, RE::ENUM_FORM_ID::k##a_elem)
-
 class FormTypeMap
 {
 public:
 	using string_type = std::string_view;
 	using enum_type = RE::ENUM_FORM_ID;
+
+	FormTypeMap(const FormTypeMap&) = delete;
+	FormTypeMap(FormTypeMap&&) = delete;
+
+	FormTypeMap& operator=(const FormTypeMap&) = delete;
+	FormTypeMap& operator=(FormTypeMap&&) = delete;
 
 	[[nodiscard]] static FormTypeMap& get()
 	{
@@ -31,6 +34,8 @@ public:
 private:
 	FormTypeMap()
 	{
+#define ELEMENT(a_elem) std::make_pair(#a_elem##sv, RE::ENUM_FORM_ID::k##a_elem)
+
 		constexpr std::array seeds{
 			ELEMENT(NONE),
 			ELEMENT(TES4),
@@ -191,6 +196,8 @@ private:
 			ELEMENT(LSPR),
 			ELEMENT(GDRY),
 			ELEMENT(OVIS),
+
+#undef ELEMENT
 		};
 
 		static_assert(seeds.size() == stl::to_underlying(RE::ENUM_FORM_ID::kTotal));
@@ -204,16 +211,8 @@ private:
 		assert(_enum2Str.size() == stl::to_underlying(RE::ENUM_FORM_ID::kTotal));
 	}
 
-	FormTypeMap(const FormTypeMap&) = delete;
-	FormTypeMap(FormTypeMap&&) = delete;
-
 	~FormTypeMap() = default;
-
-	FormTypeMap& operator=(const FormTypeMap&) = delete;
-	FormTypeMap& operator=(FormTypeMap&&) = delete;
 
 	robin_hood::unordered_flat_map<string_type, enum_type> _str2Enum;
 	robin_hood::unordered_flat_map<enum_type, string_type> _enum2Str;
 };
-
-#pragma pop_macro("ELEMENT")

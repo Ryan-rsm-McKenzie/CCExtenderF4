@@ -1,0 +1,14 @@
+{
+  "name": "exampleproject",
+  "version-string": "1",
+  "dependencies": [
+    "boost-algorithm",
+    "boost-container",
+    "boost-iostreams",
+    "boost-iterator",
+    "boost-predef",
+    "boost-stl-interfaces",
+    "robin-hood-hashing",
+    "spdlog"
+  ]
+}

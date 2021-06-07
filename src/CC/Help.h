@@ -3,40 +3,10 @@
 #include "EditorIDCache.h"
 #include "FormTypeMap.h"
 
-namespace CC
+namespace CC::Help
 {
-	class Help
+	namespace detail
 	{
-	public:
-		static void Install()
-		{
-			const auto functions = RE::SCRIPT_FUNCTION::GetConsoleFunctions();
-			const auto it = std::find_if(
-				functions.begin(),
-				functions.end(),
-				[&](auto&& a_elem) {
-					return _stricmp(a_elem.functionName, LONG_NAME.data()) == 0;
-				});
-			if (it != functions.end()) {
-				static std::array params{
-					RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
-					RE::SCRIPT_PARAMETER{ "Integer (Optional)", RE::SCRIPT_PARAM_TYPE::kInt, true },
-					RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
-				};
-
-				*it = RE::SCRIPT_FUNCTION{ LONG_NAME.data(), SHORT_NAME.data(), it->output };
-				it->helpString = HelpString().data();
-				it->paramCount = static_cast<std::uint16_t>(params.size());
-				it->parameters = params.data();
-				it->executeFunction = Execute;
-
-				logger::info("installed {}", LONG_NAME);
-			} else {
-				stl::report_and_fail("failed to find function"sv);
-			}
-		}
-
-	private:
 		enum class Filter
 		{
 			kAll,
@@ -48,10 +18,87 @@ namespace CC
 			kTotal
 		};
 
+		[[nodiscard]] inline const std::string& HelpString()
+		{
+			static auto help = []() {
+				std::string buf;
+				buf += "\"Help\" <expr>";
+				buf += "\n\t<expr> ::= <empty> | \" \" <matchstring> | \" \" <matchstring> \" \" <filter> | \" \" <matchstring> \" \" <filter> \" \" <form-type>";
+				buf += "\n\t<matchstring> ::= <string> ; The string to filter results with";
+				buf += "\n\t<filter> ::= <integer>";
+				buf += "\n\t\t; 0 - All";
+				buf += "\n\t\t; 1 - Functions";
+				buf += "\n\t\t; 2 - Settings";
+				buf += "\n\t\t; 3 - Globals";
+				buf += "\n\t\t; 4 - Forms";
+				buf += "\n\t<form-type> ::= <string> ; The form type to filter form results with";
+				return buf;
+			}();
+			return help;
+		}
+
+		[[nodiscard]] inline auto Parse(
+			const RE::SCRIPT_PARAMETER* a_parameters,
+			const char* a_compiledParams,
+			std::uint32_t& a_offset,
+			RE::TESObjectREFR* a_refObject,
+			RE::TESObjectREFR* a_container,
+			RE::Script* a_script,
+			RE::ScriptLocals* a_scriptLocals)
+			-> std::tuple<
+				std::optional<std::string>,
+				std::optional<Filter>,
+				std::optional<std::string>>
+		{
+			std::array<char, 0x200> matchstring{ '\0' };
+			std::int32_t filter = -1;
+			std::array<char, 0x200> formtype{ '\0' };
+
+			RE::Script::ParseParameters(
+				a_parameters,
+				a_compiledParams,
+				a_offset,
+				a_refObject,
+				a_container,
+				a_script,
+				a_scriptLocals,
+				matchstring.data(),
+				std::addressof(filter),
+				formtype.data());
+
+			std::tuple<
+				std::optional<std::string>,
+				std::optional<Filter>,
+				std::optional<std::string>>
+				results;
+
+			if (matchstring[0] != '\0') {
+				std::get<0>(results) = matchstring.data();
+			}
+
+			if (filter != -1) {
+				std::get<1>(results) = static_cast<Filter>(filter);
+			}
+
+			if (formtype[0] != '\0') {
+				std::get<2>(results) = formtype.data();
+			}
+
+			return results;
+		}
+
+		inline void Print(stl::zstring a_string)
+		{
+			const auto log = RE::ConsoleLog::GetSingleton();
+			if (log) {
+				log->AddString(a_string.data());
+			}
+		}
+
 		template <class T, std::size_t N, class UnaryFunctor>
-		[[nodiscard]] static auto Enumerate(
+		[[nodiscard]] inline auto Enumerate(
 			std::string_view a_matchstring,
-			stl::span<T, N> a_src,
+			std::span<T, N> a_src,
 			UnaryFunctor a_callback)
 		{
 			boost::container::vector<bool> results(a_src.size(), false);
@@ -95,7 +142,7 @@ namespace CC
 			return matched;
 		}
 
-		static void EnumerateForms(std::string_view a_matchstring, std::optional<RE::ENUM_FORM_ID> a_formtype)
+		inline void EnumerateForms(std::string_view a_matchstring, std::optional<RE::ENUM_FORM_ID> a_formtype)
 		{
 			Print("----OTHER FORMS--------------------\n"sv);
 			const auto [allForms, allFormsMapLock] = RE::TESForm::GetAllForms();
@@ -124,7 +171,7 @@ namespace CC
 				const auto idCache = EditorIDCache::get().access();
 				auto matches = Enumerate(
 					a_matchstring,
-					stl::span{ candidates.data(), candidates.size() },
+					std::span{ candidates.data(), candidates.size() },
 					[&](auto&& a_form) {
 						boost::container::static_vector<std::string_view, 2> arr;
 						if (const auto editorID = idCache->find(a_form->GetFormID()); editorID) {
@@ -141,8 +188,8 @@ namespace CC
 					matches.end(),
 					[](auto&& a_lhs, auto&& a_rhs) noexcept {
 						return a_lhs->GetFormType() != a_rhs->GetFormType() ?
-									 a_lhs->GetFormType() < a_rhs->GetFormType() :
-									 a_lhs->GetFormID() < a_rhs->GetFormID();
+					               a_lhs->GetFormType() < a_rhs->GetFormType() :
+                                   a_lhs->GetFormID() < a_rhs->GetFormID();
 					});
 				const auto& formTypeMap = FormTypeMap::get();
 				std::string buf;
@@ -184,7 +231,7 @@ namespace CC
 			}
 		}
 
-		static void EnumerateFunctions(std::string_view a_matchstring)
+		inline void EnumerateFunctions(std::string_view a_matchstring)
 		{
 			const auto print = [](const std::vector<RE::SCRIPT_FUNCTION*>& a_todo) {
 				std::string line;
@@ -229,7 +276,7 @@ namespace CC
 				functor));
 		}
 
-		static void EnumerateGlobals(std::string_view a_matchstring)
+		inline void EnumerateGlobals(std::string_view a_matchstring)
 		{
 			Print("----GLOBAL VARIABLES--------------------\n"sv);
 			const auto dataHandler = RE::TESDataHandler::GetSingleton();
@@ -237,7 +284,7 @@ namespace CC
 			const auto cache = EditorIDCache::get().access();
 			auto matches = Enumerate(
 				a_matchstring,
-				stl::span{ globals.begin(), globals.size() },
+				std::span{ globals.begin(), globals.size() },
 				[&](const RE::TESGlobal* a_global) noexcept {
 					boost::container::static_vector<std::string_view, 1> arr;
 					const auto editorID = a_global ? cache->find(a_global->GetFormID()) : nullptr;
@@ -263,7 +310,7 @@ namespace CC
 			}
 		}
 
-		static void EnumerateSettings(std::string_view a_matchstring)
+		inline void EnumerateSettings(std::string_view a_matchstring)
 		{
 			Print("----SETTINGS----------------------------\n"sv);
 
@@ -294,7 +341,7 @@ namespace CC
 
 			auto matches = Enumerate(
 				a_matchstring,
-				stl::span{ candidates.data(), candidates.size() },
+				std::span{ candidates.data(), candidates.size() },
 				[](auto&& a_elem) {
 					return std::array{ a_elem.first };
 				});
@@ -350,7 +397,7 @@ namespace CC
 			}
 		}
 
-		static bool Execute(
+		inline bool Execute(
 			const RE::SCRIPT_PARAMETER* a_parameters,
 			const char* a_compiledParams,
 			RE::TESObjectREFR* a_refObject,
@@ -414,84 +461,35 @@ namespace CC
 			return true;
 		}
 
-		[[nodiscard]] static const std::string& HelpString()
-		{
-			static auto help = []() {
-				std::string buf;
-				buf += "\"Help\" <expr>";
-				buf += "\n\t<expr> ::= <empty> | \" \" <matchstring> | \" \" <matchstring> \" \" <filter> | \" \" <matchstring> \" \" <filter> \" \" <form-type>";
-				buf += "\n\t<matchstring> ::= <string> ; The string to filter results with";
-				buf += "\n\t<filter> ::= <integer>";
-				buf += "\n\t\t; 0 - All";
-				buf += "\n\t\t; 1 - Functions";
-				buf += "\n\t\t; 2 - Settings";
-				buf += "\n\t\t; 3 - Globals";
-				buf += "\n\t\t; 4 - Forms";
-				buf += "\n\t<form-type> ::= <string> ; The form type to filter form results with";
-				return buf;
-			}();
-			return help;
+		inline constexpr auto LONG_NAME = "Help"sv;
+		inline constexpr auto SHORT_NAME = ""sv;
+	}
+
+	inline void Install()
+	{
+		const auto functions = RE::SCRIPT_FUNCTION::GetConsoleFunctions();
+		const auto it = std::find_if(
+			functions.begin(),
+			functions.end(),
+			[&](auto&& a_elem) {
+				return _stricmp(a_elem.functionName, detail::LONG_NAME.data()) == 0;
+			});
+		if (it != functions.end()) {
+			static std::array params{
+				RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
+				RE::SCRIPT_PARAMETER{ "Integer (Optional)", RE::SCRIPT_PARAM_TYPE::kInt, true },
+				RE::SCRIPT_PARAMETER{ "String (Optional)", RE::SCRIPT_PARAM_TYPE::kChar, true },
+			};
+
+			*it = RE::SCRIPT_FUNCTION{ detail::LONG_NAME.data(), detail::SHORT_NAME.data(), it->output };
+			it->helpString = detail::HelpString().data();
+			it->paramCount = static_cast<std::uint16_t>(params.size());
+			it->parameters = params.data();
+			it->executeFunction = detail::Execute;
+
+			logger::debug("installed {}", detail::LONG_NAME);
+		} else {
+			stl::report_and_fail("failed to find function"sv);
 		}
-
-		[[nodiscard]] static auto Parse(
-			const RE::SCRIPT_PARAMETER* a_parameters,
-			const char* a_compiledParams,
-			std::uint32_t& a_offset,
-			RE::TESObjectREFR* a_refObject,
-			RE::TESObjectREFR* a_container,
-			RE::Script* a_script,
-			RE::ScriptLocals* a_scriptLocals)
-			-> std::tuple<
-				std::optional<std::string>,
-				std::optional<Filter>,
-				std::optional<std::string>>
-		{
-			std::array<char, 0x200> matchstring{ '\0' };
-			std::int32_t filter = -1;
-			std::array<char, 0x200> formtype{ '\0' };
-
-			RE::Script::ParseParameters(
-				a_parameters,
-				a_compiledParams,
-				a_offset,
-				a_refObject,
-				a_container,
-				a_script,
-				a_scriptLocals,
-				matchstring.data(),
-				std::addressof(filter),
-				formtype.data());
-
-			std::tuple<
-				std::optional<std::string>,
-				std::optional<Filter>,
-				std::optional<std::string>>
-				results;
-
-			if (matchstring[0] != '\0') {
-				std::get<0>(results) = matchstring.data();
-			}
-
-			if (filter != -1) {
-				std::get<1>(results) = static_cast<Filter>(filter);
-			}
-
-			if (formtype[0] != '\0') {
-				std::get<2>(results) = formtype.data();
-			}
-
-			return results;
-		}
-
-		static void Print(stl::zstring a_string)
-		{
-			const auto log = RE::ConsoleLog::GetSingleton();
-			if (log) {
-				log->AddString(a_string.data());
-			}
-		}
-
-		static constexpr auto LONG_NAME = "Help"sv;
-		static constexpr auto SHORT_NAME = ""sv;
-	};
+	}
 }

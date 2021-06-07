@@ -14,31 +14,32 @@
 	* Iterator
 * [CommonLibF4](https://github.com/Ryan-rsm-McKenzie/CommonLibF4)
 * [robin-hood-hashing](https://github.com/martinus/robin-hood-hashing)
+* [spdlog](https://github.com/gabime/spdlog)
 
 # End User Dependencies
 * [Address Library for F4SE Plugins](https://www.nexusmods.com/fallout4/mods/47327)
-* [Microsoft Visual C++ Redistributable for Visual Studio 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
 * [F4SE](https://f4se.silverlock.org/)
+* [Microsoft Visual C++ Redistributable for Visual Studio 2019](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
 
 # Console Commands
 
 ## Clear
-**Version**: 1.0.0  
-**Command**: `"Clear"`  
-**Description**: Clears the console output.  
+**Version**: 1.0.0
+**Command**: `"Clear"`
+**Description**: Clears the console output.
 **Example Usage**: `clear`
 
 ## CrashToDesktop
-**Version**: 1.1.0  
-**Command**: `"CrashToDesktop" | "CTD"`  
-**Description**: Forcibly crashes the game. Does not work in the main menu.  
+**Version**: 1.1.0
+**Command**: `"CrashToDesktop" | "CTD"`
+**Description**: Forcibly crashes the game. Does not work in the main menu.
 **Example Usage**: `ctd`
 
 ## Help
-**Version**: 1.0.0  
-**Command**: `"Help" <expr>`  
-**Description**: Performs a substring search on all forms by (override) name and editor ID. This reimplementation is noticably faster and more accurate than the original version.  
-**Example Usage**: `help laser 4 weap`  
+**Version**: 1.0.0
+**Command**: `"Help" <expr>`
+**Description**: Performs a substring search on all forms by (override) name and editor ID. This reimplementation is noticably faster and more accurate than the original version.
+**Example Usage**: `help laser 4 weap`
 **Grammar**:
 ```
 <expr> ::= <empty> | " " <matchstring> | " " <matchstring> " " <filter> | " " <matchstring> " " <filter> " " <form-type>
