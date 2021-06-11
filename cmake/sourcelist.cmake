@@ -1,7 +1,9 @@
 set(SOURCES
+	src/CC/AddAchievement.h
 	src/CC/CC.cpp
 	src/CC/CC.h
 	src/CC/Clear.h
+	src/CC/ClearAchievement.h
 	src/CC/CrashToDesktop.h
 	src/CC/Help.h
 	src/EditorIDCache.h

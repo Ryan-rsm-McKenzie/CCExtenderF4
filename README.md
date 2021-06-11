@@ -3,7 +3,9 @@
 * [Build Dependencies](#build-dependencies)
 * [End User Dependencies](#end-user-dependencies)
 * [Console commands](#console-commands)
+	* [AddAchievement](#addachievement)
 	* [Clear](#clear)
+	* [ClearAchievement](#clearachievement)
 	* [CrashToDesktop](#crashtodesktop)
 	* [Help](#help)
 
@@ -23,11 +25,31 @@
 
 # Console Commands
 
+## AddAchievement
+**Version**: 1.2.0
+**Command**: `"AddAchievement" <id>`
+**Description**: Awards the achievement with the given [id](https://steamdb.info/app/377160/stats/).
+**Example Usage**: `AddAchievement 1`
+**Grammar**:
+```
+<id> ::= <integer>
+```
+
 ## Clear
 **Version**: 1.0.0
 **Command**: `"Clear"`
 **Description**: Clears the console output.
 **Example Usage**: `clear`
+
+## ClearAchievement
+**Version**: 1.2.0
+**Command**: `"ClearAchievement" <id>`
+**Description**: Removes the achievement with the given [id](https://steamdb.info/app/377160/stats/).
+**Example Usage**: `ClearAchievement 1`
+**Grammar**:
+```
+<id> ::= <integer>
+```
 
 ## CrashToDesktop
 **Version**: 1.1.0
